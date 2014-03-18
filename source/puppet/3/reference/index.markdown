@@ -7,7 +7,7 @@ canonical: "/puppet/latest/reference/index.html"
 
 Welcome to the Puppet 3 Reference Manual! Use the navigation to the left to get around. [Documentation for Puppet 2.7 can be found here.](/puppet/2.7/reference)
 
-欢迎查看Puppet 3参考手册！你可以使用导航进行浏览。[Puppet 2.7的相关文档可以在这里找到。](/puppet/2.7/reference)
+欢迎查看Puppet 3参考手册！你可以使用左侧导航进行跳转。[Puppet 2.7的相关文档可以在这里找到。](/puppet/2.7/reference)
 
 To install Puppet 3, see [the Puppet installation guide](/guides/installation.html). For general advice on upgrading between major versions, see [Upgrading Puppet](/guides/upgrading.html).
 
@@ -15,10 +15,10 @@ To install Puppet 3, see [the Puppet installation guide](/guides/installation.ht
 
 This manual is split into several sections:
 
-本手册分割为以下部分：
+本手册分为如下几个部分：
 
 * ["Puppet 3.x Release Notes"](./release_notes.html) contains information about Puppet 3's new features, and tracks changes introduced in minor and patch releases in the Puppet 3 series.
-* ["Puppet 3.x版本说明"](./release_notes.html)包含有关Puppet 3的新特性信息，并且跟踪Puppet 3系列发布的次要版本和补丁的变化。
+* ["Puppet 3.x版本说明"](./release_notes.html)包含有关Puppet 3的新特性信息，并且跟踪Puppet 3系列发布的小版本和补丁的变化简介。
 * ["The Puppet Language"](./lang_summary.html) documents Puppet's configuration language as implemented in Puppet 3.
 * ["Puppet语言"](./lang_summary.html)记录了Puppet 3中使用的Puppet配置语言。
 * ["Modules"](./modules_fundamentals.html) explains how to organize your Puppet manifests, obtain pre-existing modules, and publish your own modules for public use.
