@@ -12,50 +12,92 @@ canonical: "/puppet/latest/reference/config_ssl_external_ca.html"
 
 Starting with **Puppet 3.2.0 and later,** Puppet can use an existing external CA for all of its SSL communications. This page describes the supported configurations for external CAs.
 
+自**Puppet 3.2.0开始**，Puppet可以使用已有的外部证书颁发机构(CA)进行SSL通信。本页描述了用于支持外部证书颁发机构(CA)的配置。
+
 > **Note:** This page uses RFC 2119 style semantics for MUST, SHOULD, MAY.
 
+> **注意：** 对于必须、应当、可能，本页面使用RFC2119的语义格式。
+
 > **Historical note:** Using an external CA with Puppet has sometimes worked (or appeared to), but it frequently broke, and there was never a concerted effort to keep it working. Most recently, a security fix in Puppet 2.7.18 broke nearly all external CAs, and prevented a lot of people from upgrading through the early 3.x series. (See [issue #15561](https://projects.puppetlabs.com/issues/15561).)
->
+
+> **过往记录：** 在Puppet中使用外部证书颁发机构(CA)有时候可以正常使用(似乎是这样的)，但是经常出故障，并且从未有一个统一的解决方案以保证它的正常运作。最近，Puppet 2.7.18的一个安全修补程序还破坏了几乎所有的外部证书颁发机构(CA)，并且使得很多人升级至早期的3.x系统版本时失败。(参见[issue #15561](https://projects.puppetlabs.com/issues/15561)。)
+
 > Starting with Puppet 3.2, Puppet Labs officially supports and tests external CAs in certain configurations. We're hoping that 15561 will be the last total external CA breakage. Thanks for your patience, and please get in touch if your use case isn't covered.
+
+> 从Puppet 3.2开始，Puppet Labs官方支持并且以明确的配置测试外部证书颁发机构(CA)，我们希望issue 15561将成为最后一个外部证书颁发机构(CA)的破坏者。感谢你的耐心，如果你的使用实例并未涵盖于此，请让我们知道。
 
 
 Supported External CA Configurations
 -----
 
+被支持的外部CA配置
+-----
+
 Puppet ≥ 3.2 supports _some_ external CA configurations, but not every possible arrangement. We fully support the following setups:
 
-1. [Single self-signed CA which directly issues SSL certificates.](#option-1-single-ca)
-2. [Single, intermediate CA issued by a root self-signed CA.](#option-2-single-intermediate-ca)  The intermediate
-   CA directly issues SSL certificates; the root CA doesn't.
+Puppet 3.2及以上的版本支持_一些_外部的证书颁发机构(CA)配置，但不是所有可能的情况。我们完全支持以下的设置：
+
+1. [Single self-signed CA which directly issues SSL certificates.](#option-1-single-ca) 
+2. [Single, intermediate CA issued by a root self-signed CA.](#option-2-single-intermediate-ca)  The intermediate CA directly issues SSL certificates; the root CA doesn't.
 3. [Two intermediate CAs, both issued by the same root self-signed CA.](#option-3-two-intermediate-cas-issued-by-one-root-ca)
     * One intermediate CA issues SSL certificates for puppet master servers.
     * The other intermediate CA issues SSL certificates for agent nodes.
     * Agent certificates can't act as servers, and master certificates can't act as clients.
 
+1. [直接颁发SSL证书的独立自签名证书颁发机构(CA).](#option-1-single-ca)
+2. [独立的中间证书颁发机构(CA)，颁发自一个自签名的根证书颁发机构(CA)](#option-2-single-intermediate-ca) 中间证书颁发机构(CA)直接颁发SSL证书，根证书颁发机构(CA)不颁发。
+3. [两个中间证书颁发机构(CA)，都由相同的自签名的根证书颁发机构(CA)所颁发](#option-3-two-intermediate-cas-issued-by-one-root-ca)
+    * 一个中间机构为puppet主服务器颁发SSL证书。
+    * 另一个中间机构为代理节点颁发SSL证书。
+    * 代理证书不能够成为服务器，同样主证书也不能成为客户端。
+
 These are fully supported by Puppet Labs, which means:
 
+如下情况意味着被Puppet Labs完全支持：
+
 * Issues that arise in one of these three arrangements are considered **bugs,** and we'll fix them ASAP.
+* 以上三种情况中任意一种出现的问题被认为是 **bug，**我们会尽快修复。
 * Issues that arise in any _other_ external CA setup are considered **feature requests,** and we'll consider whether to expand our support.
+* 任何_其他_外部证书颁发机构(CA)出现的问题被认为是 **特性需求，**我们会考虑是否扩充至我们的支持范围中。
 
 These configurations are all-or-nothing rather than mix-and-match. When using an external CA, the built in Puppet CA service **must** be disabled and cannot be used to issue SSL certificates.
 
+以上配置是要么全有要么全无的配置而不是混合或匹配的配置。当使用外部证书颁发机构(CA)时，Puppet CA服务的构建 **必须** 被禁止并且不能被用以颁发SSL证书。
+
 Additionally, Puppet cannot automatically distribute certificates in these configurations --- you must have your own complete system for issuing and distributing certificates.
 
+另外，Puppet在以上配置中不能自动分发证书 --- 你必须拥有自有的完整系统用以颁发并且分发证书。
+
+**`这句存在疑问`**
 
 General Notes and Requirements
 -----
 
+通用事项及需求
+-----
+
 ### Rack Webserver is Required
+### 需要支持Rack的web服务器
 
 The puppet master must be running inside of a Rack-enabled web server, not the built-in Webrick server.
 
+puppet主控必须运行在支持Rack的web服务器中，不能使用内置的Webrick服务器。
+
 In practice, this means Apache or Nginx.  We fully support any web server that can:
+
+在实际中，这意味着使用Apache或Nginx。我们完全支持任何拥有如下功能的web服务器：
 
 * Terminate SSL
 * Verify the authenticity of a client SSL certificate
 * Set two request headers for:
     * Whether the client was verified
     * The client's distinguished name
+
+* SSL调度
+* 验证客户端SSL证书真伪
+* 设置两种请求包头：
+	* 客户端是否已验证
+	* 客户端的识别名称
 
 ### PEM Encoding of Credentials is Mandatory
 
