@@ -67,8 +67,7 @@ These configurations are all-or-nothing rather than mix-and-match. When using an
 Additionally, Puppet cannot automatically distribute certificates in these configurations --- you must have your own complete system for issuing and distributing certificates.
 
 另外，Puppet在以上配置中不能自动分发证书 --- 你必须拥有自有的完整系统用以颁发并且分发证书。
-
-**`这句存在疑问`**
+**`>>>这句存在疑问`**
 
 General Notes and Requirements
 -----
@@ -101,50 +100,88 @@ In practice, this means Apache or Nginx.  We fully support any web server that c
 
 ### PEM Encoding of Credentials is Mandatory
 
+### 证书的PEM编码是强制性的
+
 Puppet always expects its SSL credentials to be in `.pem` format.
+
+Puppet一直期望它的SSL证书是 `.pem` 格式的。
 
 ### Normal Puppet Master Certificate Requirements Still Apply
 
+### 常规的Puppet主控证书的需求仍然存在
+
 Any puppet master certificate must contain the DNS name at which agent nodes will attempt to contact that master, either as the subject CN or as a Subject Alternative Name (DNS).
+
+任何puppet主控证书必须包含DNS名，即代理节点联系主控节点的名称，无论是CN项目还是备用名称项目(DNS)。
+**`>>>这句存在疑问`**
 
 ### Format of X-Client-DN Request Header
 
+### 请求包头的X-Client-DN格式
+
 Rack web servers must set a client request header, which the puppet master will check based on the [`ssl_client_header` setting](/references/latest/configuration.html#sslclientheader).
 
+支持Rack的web服务器必须设置客户端的请求包头，puppet将以[`ssl_client_header`设置](/references/latest/configuration.html#sslclientheader)检查此包头。
+
 This header should conform to the following specifications:
+
+包头需要符合以下条件：
 
 * The value of the client certificate DN should be in [RFC-2253](http://www.ietf.org/rfc/rfc2253.txt) format. The format of the `SSL_CLIENT_S_DN` environment variable (set by Apache ≥ 2.2's `mod_ssl`) is fully supported.
 * Alternatively, the value of this request header may be in "OpenSSL" format.
 
+* 客户端的证书DN值需要遵从 [RFC-2253](http://www.ietf.org/rfc/rfc2253.txt) 格式。环境变量`SSL_CLIENT_S_DN`(由Apache2.2及以上版本的 `mod_ssl` 设置)的格式完全被支持。
+
 ### Revocation
+
+### 吊销
 
 Certificate revocation list (CRL) checking works in all three supported
 configurations, so long as the CRL file is distributed to the agents and masters
 using an "out of band" process.  Puppet won't automatically update the CRL on any
 of the components in the system.
 
+证书吊销列表(CRL)的检查工作在三种支持配置中都可以使用，只要CRL文件使用“带外”过程向代理及主控分发即可。Puppet将不会在系统的任何组件中自动更新CRL。
+
 #### If Unused:
+
+#### 如果未使用CRL：
 
 If revocation lists are **not** being used by the external CA, you must disable CRL checking on the agent.
 Set `certificate_revocation = false` in the
 `[agent]` section of [puppet.conf][conf] on **every agent node.**
 
+如果吊销列表 **不** 为外部CA使用，你必须在代理上禁止CRL检查。
+在 **每个代理节点** [puppet.conf][conf]的`[agent]`中，由 `certificate_revocation = false` 进行设置。
+
 (If it's not set to false and the agent doesn't already have a CRL file, it will try to download one from the master. This will fail, because the master must have the CA service disabled.)
 
+(如果代理不存在CRL文件并且已设置为false，它将会试图从主控下载一个。这将导致失败，因为主控必须禁止CA服务。)
+
 #### If Used:
+
+#### 如果使用CRL：
 
 If revocation lists **are** being used by the external CA, then the CRL file must
 be manually distributed to **every agent node** as a PEM encoded bundle.  Puppet will not automatically distribute this file.
 
+如果吊销列表 **是** 为外部CA使用，CRL文件必须以PEM编码格式手动分发至 **每个代理节点**。 Puppet将不会自动分发这个文件。 
+
 To determine where to put the CRL file, run `puppet agent --configprint hostcrl`.
 
+可以运行 `puppet agent --configprint hostcrl` 以确定CRL文件的放置位置。
+
 Option 1: Single CA
+-----
+
+第一种情形：独立CA
 -----
 
 A single CA is the default configuration of Puppet when the internal CA is
 being used.  A single, externally issued CA may also be used in a similar
 manner.
 
+当内部CA启用时，puppet的默认配置为独立CA。由外部颁发证书的CA将采用类似的方式。
 
 
                    +------------------------+
@@ -162,44 +199,93 @@ manner.
       |                 |                |                |
       +-----------------+                +----------------+
 
+                   +------------------------+
+                   |                        |
+                   |        自签名根CA      |
+                   |                        |
+                   +------+----------+------+
+                          |          |
+               +----------+          +------------+
+               |                                  |
+               v                                  v
+      +-----------------+                +----------------+
+      |                 |                |                |
+      |   主控SSL认证   |                |   代理SSL认证  |
+      |                 |                |                |
+      +-----------------+                +----------------+
+
 
 ### Puppet Master
 
+### Puppet主控配置
+
 {% capture master_basic %}
 Configure the puppet master in four steps:
+
+配置puppet主控分为四步：
 
 1. Disable the internal CA service
 2. Ensure that the certname will never change
 3. Put certificates/keys in place on disk
 4. Configure the web server
 
+1. 禁止内部CA服务
+2. 确保certname不会被修改
+3. 将证书/密钥存放于磁盘中
+4. 配置web服务器
+
 On the master, in [`puppet.conf`][conf], make sure the following settings are configured:
+
+在主控上，[`puppet.conf`][conf]中，确保配置了以下设置：
 
     [master]
     ca = false
     certname = <some static string, e.g. 'puppetmaster'>
 
+    [master]
+    ca = false
+    certname = <一些静态字串，比如'puppetmaster'>
+
 * The internal CA service must be disabled using `ca = false`.
 * The certname must be set to a static value. This can still be the machine's FQDN, but you must not leave the setting blank. (A static certname will keep Puppet from getting confused if the machine's hostname ever changes.)
 
+* 内部CA服务必须以 `ca = false` 禁止运行。
+* certname必须设置为静态字串。可以同设备的FQDN，但是不能留空。(一个静态的certname将使得puppet不会受到设备hostname修改的影响。)
+
 Once this configuration is set, put the external credentials into the correct filesystem locations.  You can run the following commands to find the appropriate locations:
+
+一旦这项配置被配置，存放外部证书到正确的文件系统位置。你可以运行以下命令找寻适当的位置：
 
 Credential                         | File location
 -----------------------------------|-------------------------------------------
 Master SSL certificate             | `puppet master --configprint hostcert`
 Master SSL certificate private key | `puppet master --configprint hostprivkey`
 Root CA certificate                | `puppet master --configprint localcacert`
+
+证书                               | 文件位置
+-----------------------------------|-------------------------------------------
+主控SSL证书                        | `puppet master --configprint hostcert`
+主控SSL证书私钥                    | `puppet master --configprint hostprivkey`
+根CA证书                           | `puppet master --configprint localcacert`
 {% endcapture %}
 
 {{ master_basic }}
 
 With these files in place, the web server should be configured to:
 
+这些文件存放就绪后，配置web服务器如下：
+
 * Use the root CA certificate, the master's certificate, and the master's key
 * Set the verification header (as specified in the master's [`ssl_client_verify_header` setting][verify_header])
 * Set the client DN header (as specified in the master's [`ssl_client_header` setting][client_header])
 
+* 使用根CA证书，主控的证书，和主控的密钥
+* 设置验证包头(在主控的[`ssl_client_verify_header`设置][verify_header]中配置)
+* 设置客户端DN包头(在主控的[`ssl_client_header`设置][client_header]中配置)
+
 An example of this configuration for Apache:
+
+以下为一份Apache的配置样本：
 
     Listen 8140
     <VirtualHost *:8140>
@@ -236,6 +322,8 @@ The `config.ru` file for rack has no special configuration when using an
 external CA.  Please follow the standard rack documentation for using Puppet
 with rack.  The following example will work with Puppet 3.2.
 
+当使用外部CA时，rack的`config.ru`文件没有特殊配置。请遵循标准rack文档以配置Puppet使用rack。以下为一个运行在Puppet 3.2的例子。
+
     {% highlight ruby %}
     $0 = "master"
     ARGV << "--rack"
@@ -250,9 +338,15 @@ with rack.  The following example will work with Puppet 3.2.
 
 ### Puppet Agent
 
+### Puppet代理配置
+
 You don't need to change any settings.
 
+你不需要修改任何设置。
+
 Put the external credentials into the correct filesystem locations.  You can run the following commands to find the appropriate locations:
+
+将外部证书存放至正确的文件系统位置。你可以运行以下命令找寻适当的位置：
 
 Credential                        | File location
 ----------------------------------|-----------------------------------------
@@ -260,14 +354,22 @@ Agent SSL certificate             | `puppet agent --configprint hostcert`
 Agent SSL certificate private key | `puppet agent --configprint hostprivkey`
 Root CA certificate               | `puppet agent --configprint localcacert`
 
-
+证书                              | 文件位置
+----------------------------------|-----------------------------------------
+代理SSL证书                       | `puppet agent --configprint hostcert`
+代理SSL证书私钥                   | `puppet agent --configprint hostprivkey`
+根CA证书                          | `puppet agent --configprint localcacert`
 
 Option 2: Single Intermediate CA
+-----
+
+第二种情形：独立中间证书颁发机构
 -----
 
 The single intermediate CA configuration builds from the single self-signed CA
 configuration and introduces one additional intermediate CA.
 
+独立中间证书颁发机构的配置来自于独立自签名CA配置，它引入了一个额外的中间人CA。
 
 
                    +------------------------+
@@ -293,27 +395,67 @@ configuration and introduces one additional intermediate CA.
       |                 |                |                |
       +-----------------+                +----------------+
 
+                   +------------------------+
+                   |                        |
+                   |      自签名根CA        |
+                   |                        |
+                   +-----------+------------+
+                               |
+                               |
+                               v
+                   +------------------------+
+                   |                        |
+                   |  独立中间证书颁发机构  |
+                   |                        |
+                   +------+----------+------+
+                          |          |
+               +----------+          +------------+
+               |                                  |
+               v                                  v
+      +-----------------+                +----------------+
+      |                 |                |                |
+      |   主控SSL认证   |                |   代理SSL认证  |
+      |                 |                |                |
+      +-----------------+                +----------------+
+
 
 The Root CA does not issue SSL certificates in this configuration.  The
 intermediate CA issues SSL certificates for clients and servers alike.
 
+在此配置中根CA并不颁发SSL证书。中间证书颁发机构为客户端及服务器颁发SSL证书。
+
 ### Puppet Master
+
+### puppet主控配置
 
 {{ master_basic }}
 
 You must also create a **CA bundle** for the web server. Append **the two CA certificates** together; the Root CA certificate must be located after the intermediate CA certificate within the file.
 
+你必须为web服务器创建一个 **CA集**。同时附加至 **两个CA证书**；此文件中，根CA证书必须位于中间证书颁发机构证书之后。
+
     $ cat intermediate_ca.pem root_ca.pem > ca_bundle.pem
 
 Put this file somewhere predictable. Puppet doesn't use it directly, but it can live alongside Puppet's copies of the certificates.
 
+将此文件存放于可预测的某处。Puppet不会直接使用它，但它可以与puppet的证书副本共存与某处。
+**`>>>这句存在疑问`**
+
 With these files in place, the web server should be configured to:
+
+文件存放以后，web服务器应当配置如下：
 
 * Use the intermediate+Root CA bundle, the master's certificate, and the master's key
 * Set the verification header (as specified in the master's [`ssl_client_verify_header` setting][verify_header])
 * Set the client DN header (as specified in the master's [`ssl_client_header` setting][client_header])
 
+* 使用中间+根的CA集，主控的证书，主控的密钥
+* 设置验证包头(在主控的[`ssl_client_verify_header`设置][verify_header]中配置)
+* 设置客户端DN包头(在主控的[`ssl_client_header`设置][client_header]中配置)
+
 An example of this configuration for Apache:
+
+以下为一份Apache的配置样本：
 
     Listen 8140
     <VirtualHost *:8140>
@@ -356,14 +498,22 @@ An example of this configuration for Apache:
 
 ### Puppet Agent
 
+### Puppet代理配置
+
 With an intermediate CA, puppet agent needs a modified value for [the `ssl_client_ca_auth` setting][ca_auth] in its puppet.conf:
+
+使用中间CA的puppet代理需要在它的puppet.conf中修改[`ssl_client_ca_auth`设置][ca_auth]的值：
 
     [agent]
     ssl_client_ca_auth = $certdir/issuer.pem
 
 The value should point to somewhere in the `$certdir`.
 
+这个值需要指向 `$certdir` 中的某处。
+
 Put the external credentials into the correct filesystem locations.  You can run the following commands to find the appropriate locations:
+
+将外部证书存放至正确的文件系统位置。你可以运行以下命令找寻适当的位置：
 
 Credential                        | File location
 ----------------------------------|------------------------------------------------
@@ -372,14 +522,24 @@ Agent SSL certificate private key | `puppet agent --configprint hostprivkey`
 Root CA certificate               | `puppet agent --configprint localcacert`
 Intermediate CA certificate       | `puppet agent --configprint ssl_client_ca_auth`
 
-
+证书                              | 文件位置
+----------------------------------|-----------------------------------------
+代理SSL证书                       | `puppet agent --configprint hostcert`
+代理SSL证书私钥                   | `puppet agent --configprint hostprivkey`
+根CA证书                          | `puppet agent --configprint localcacert`
+中间CA证书                        | `puppet agent --configprint localcacert`
 
 Option 3: Two Intermediate CAs Issued by One Root CA
 -----
 
+第三种情形：两个中间CA，证书颁发自同一个根CA
+
+
 This configuration uses different CAs to issue puppet master certificates and puppet agent
 certificates.  This makes them easily distinguishable, and prevents any agent certificate from being
 usable for a puppet master.
+
+这种配置使用不同的CA向puppet主控及代理颁发证书。可以使其易于区分，并且可以防止任何puppet代理的证书应用到puppet主控上。
 
 
 
@@ -406,30 +566,71 @@ usable for a puppet master.
       |                 |                |                |
       +-----------------+                +----------------+
 
+                   +------------------------+
+                   |                        |
+                   |       自签名根CA       |
+                   |                        |
+                   +------+----------+------+
+                          |          |
+               +----------+          +------------+
+               |                                  |
+               v                                  v
+      +-----------------+                +----------------+
+      |                 |                |                |
+      |     主控CA      |                |     代理CA     |
+      |                 |                |                |
+      +--------+--------+                +--------+-------+
+               |                                  |
+               |                                  |
+               v                                  v
+      +-----------------+                +----------------+
+      |                 |                |                |
+      |   主控SSL认证   |                |   代理SSL认证  |
+      |                 |                |                |
+      +-----------------+                +----------------+
 
 In this configuration puppet agents are configured to only authenticate peer
 certificates issued by the Master CA.  Puppet masters are configured to only
 authenticate peer certificates issued by the Agent CA.
 
+在这种配置中puppet代理被配置为仅认证由同级主控CA颁发的证书。puppet主控配置为仅认证由同级代理CA颁发的证书。
+
 > **Note:** If you're using this configuration, you can't use the ActiveRecord inventory service backend with multiple puppet master servers. Use [PuppetDB][] for the inventory service instead.
 
+> **注意：** 如果你不使用这种配置，你不能在拥有多puppet主控服务器的后端使用ActiveRecord inventory service。使用[PuppetDB][]作为inventory service的替代。
+
 ### Puppet Master
+
+### puppet主控配置
 
 {{ master_basic }}
 
 You must also create a **CA bundle** for the web server. Append the **Agent CA certificate and Root CA certificate** together; the Root CA certificate must be located after the Agent CA certificate within the file.
 
+你必须同样为web服务器创建一个 **CA集**。同时附加至 **代理CA证书及根CA证书**；此文件中，根CA证书必须位于代理CA证书之后。
+
     $ cat agent_ca.pem root_ca.pem > ca_bundle_for_master.pem
 
 Put this file somewhere predictable. Puppet doesn't use it directly, but it can live alongside Puppet's copies of the certificates.
 
+将此文件存放于可预测的某处。Puppet不会直接使用它，但它可以与puppet的证书副本共存与某处。
+**`>>>这句存在疑问`**
+
 With these files in place, the web server should be configured to:
+
+文件存放以后，web服务器应当配置如下：
 
 * Use the Agent+Root CA bundle, the master's certificate, and the master's key
 * Set the verification header (as specified in the master's [`ssl_client_verify_header` setting][verify_header])
 * Set the client DN header (as specified in the master's [`ssl_client_header` setting][client_header])
 
+* 使用代理+根的CA集，主控的证书，主控的密钥
+* 设置验证包头(在主控的[`ssl_client_verify_header`设置][verify_header]中配置)
+* 设置客户端DN包头(在主控的[`ssl_client_header`设置][client_header]中配置)
+
 An example of this configuration for Apache:
+
+以下为一份Apache的配置样本：
 
     Listen 8140
     <VirtualHost *:8140>
@@ -472,14 +673,22 @@ An example of this configuration for Apache:
 
 ### Puppet Agent
 
+### Puppet代理配置
+
 With split CAs, puppet agent needs a modified value for [the `ssl_client_ca_auth` setting][ca_auth] in its puppet.conf:
+
+使用分离CA的puppet代理需要在它的puppet.conf中修改[`ssl_client_ca_auth`设置][ca_auth]的值：
 
     [agent]
     ssl_client_ca_auth = $certdir/ca_master.pem
 
 The value should point to somewhere in the `$certdir`.
 
+这个值需要指向 `$certdir` 中的某处。
+
 Put the external credentials into the correct filesystem locations.  You can run the following commands to find the appropriate locations:
+
+将外部证书存放至正确的文件系统位置。你可以运行以下命令找寻适当的位置：
 
 Credential                        | File location
 ----------------------------------|------------------------------------------------
@@ -488,3 +697,9 @@ Agent SSL certificate private key | `puppet agent --configprint hostprivkey`
 Root CA certificate               | `puppet agent --configprint localcacert`
 Master CA certificate             | `puppet agent --configprint ssl_client_ca_auth`
 
+证书                              | 文件位置
+----------------------------------|-----------------------------------------
+代理SSL证书                       | `puppet agent --configprint hostcert`
+代理SSL证书私钥                   | `puppet agent --configprint hostprivkey`
+根CA证书                          | `puppet agent --configprint localcacert`
+主控CA证书                        | `puppet agent --configprint localcacert`
